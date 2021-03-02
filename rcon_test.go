@@ -20,29 +20,29 @@ func startTestServer(fn func(net.Conn, *bytes.Buffer)) (string, error) {
 		}
 		defer conn.Close()
 
-		buf := make([]byte, readBufferSize)
+		buf := make([]byte, maxPackageSize)
 		_, err = conn.Read(buf)
 		if err != nil {
 			return
 		}
 
-		var packetSize, requestId, cmdType int32
+		var packetSize, requestID, cmdType int32
 		var str []byte
 		b := bytes.NewBuffer(buf)
 		binary.Read(b, binary.LittleEndian, &packetSize)
-		binary.Read(b, binary.LittleEndian, &requestId)
+		binary.Read(b, binary.LittleEndian, &requestID)
 		binary.Read(b, binary.LittleEndian, &cmdType)
 		str, err = b.ReadBytes(0x00)
 		if err != nil {
 			return
 		}
 		if string(str[:len(str)-1]) != "blerg" {
-			requestId = -1
+			requestID = -1
 		}
 
 		b.Reset()
 		binary.Write(b, binary.LittleEndian, int32(10))
-		binary.Write(b, binary.LittleEndian, int32(requestId))
+		binary.Write(b, binary.LittleEndian, int32(requestID))
 		binary.Write(b, binary.LittleEndian, int32(respAuthResponse))
 		binary.Write(b, binary.LittleEndian, byte(0))
 		binary.Write(b, binary.LittleEndian, byte(0))
@@ -81,7 +81,7 @@ func TestMultipacket(t *testing.T) {
 		binary.Write(b, binary.LittleEndian, int32(10+4000))
 		binary.Write(b, binary.LittleEndian, int32(123))
 		binary.Write(b, binary.LittleEndian, int32(respResponse))
-		for i := 0; i < 4000; i += 1 {
+		for i := 0; i < 4000; i++ {
 			binary.Write(b, binary.LittleEndian, byte(' '))
 		}
 		binary.Write(b, binary.LittleEndian, byte(0))
@@ -91,7 +91,7 @@ func TestMultipacket(t *testing.T) {
 		binary.Write(b, binary.LittleEndian, int32(10+4000))
 		binary.Write(b, binary.LittleEndian, int32(123))
 		binary.Write(b, binary.LittleEndian, int32(respResponse))
-		for i := 0; i < 2000; i += 1 {
+		for i := 0; i < 2000; i++ {
 			binary.Write(b, binary.LittleEndian, byte(' '))
 		}
 		c.Write(b.Bytes())
@@ -99,7 +99,7 @@ func TestMultipacket(t *testing.T) {
 
 		// start packet
 		b.Reset()
-		for i := 0; i < 2000; i += 1 {
+		for i := 0; i < 2000; i++ {
 			binary.Write(b, binary.LittleEndian, byte(' '))
 		}
 		binary.Write(b, binary.LittleEndian, byte(0))
@@ -109,7 +109,7 @@ func TestMultipacket(t *testing.T) {
 		binary.Write(b, binary.LittleEndian, int32(10+2000))
 		binary.Write(b, binary.LittleEndian, int32(123))
 		binary.Write(b, binary.LittleEndian, int32(respResponse))
-		for i := 0; i < 2000; i += 1 {
+		for i := 0; i < 2000; i++ {
 			binary.Write(b, binary.LittleEndian, byte(' '))
 		}
 		binary.Write(b, binary.LittleEndian, byte(0))
@@ -124,7 +124,7 @@ func TestMultipacket(t *testing.T) {
 		binary.Write(b, binary.LittleEndian, int32(10+2000))
 		binary.Write(b, binary.LittleEndian, int32(123))
 		binary.Write(b, binary.LittleEndian, int32(respResponse))
-		for i := 0; i < 2000; i += 1 {
+		for i := 0; i < 2000; i++ {
 			binary.Write(b, binary.LittleEndian, byte(' '))
 		}
 		binary.Write(b, binary.LittleEndian, byte(0))

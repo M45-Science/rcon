@@ -98,7 +98,10 @@ func (r *RemoteConsole) RemoteAddr() net.Addr {
 
 // Write sends a command to the server.
 func (r *RemoteConsole) Write(cmd string) (requestID int, err error) {
-	return r.writeCmd(newRequestID(), typeExecCommand, cmd)
+	requestID = int(newRequestID())
+	err = r.writeCmd(int32(requestID), typeExecCommand, cmd)
+
+	return
 }
 
 // Read reads a incoming request from the server.
@@ -125,13 +128,13 @@ func newRequestID() int32 {
 }
 
 func (r *RemoteConsole) auth(password string, timeout time.Duration) error {
-	reqID, err := r.writeCmd(newRequestID(), typeAuth, password)
+	reqID := newRequestID()
+	err := r.writeCmd(reqID, typeAuth, password)
 	if err != nil {
 		return err
 	}
 
-	var respType, requestID int
-	respType, requestID, _, err = r.readResponse(timeout)
+	respType, responseID, _, err := r.readResponse(timeout)
 	if err != nil {
 		return err
 	}
@@ -140,7 +143,7 @@ func (r *RemoteConsole) auth(password string, timeout time.Duration) error {
 	// with RCON servers that you get an empty response before receiving the
 	// auth response.
 	if respType != typeAuthResponse {
-		respType, requestID, _, err = r.readResponse(timeout)
+		respType, responseID, _, err = r.readResponse(timeout)
 	}
 	if err != nil {
 		return err
@@ -148,22 +151,22 @@ func (r *RemoteConsole) auth(password string, timeout time.Duration) error {
 	if respType != typeAuthResponse {
 		return ErrInvalidAuthResponse
 	}
-	if requestID != reqID {
+	if responseID != int(reqID) {
 		return ErrAuthFailed
 	}
 
 	return nil
 }
 
-func (r *RemoteConsole) writeCmd(reqID, pkgType int32, str string) (int, error) {
-	if len(str) > 1024-10 {
-		return -1, ErrCommandTooLong
+func (r *RemoteConsole) writeCmd(reqID, pkgType int32, cmd string) error {
+	if len(cmd) > 1024-10 {
+		return ErrCommandTooLong
 	}
 
-	buffer := bytes.NewBuffer(make([]byte, 0, minPackageSize+fieldPackageSize+len(str)))
+	buffer := bytes.NewBuffer(make([]byte, 0, minPackageSize+fieldPackageSize+len(cmd)))
 
 	// packet size
-	binary.Write(buffer, binary.LittleEndian, int32(minPackageSize+len(str)))
+	binary.Write(buffer, binary.LittleEndian, int32(minPackageSize+len(cmd)))
 
 	// request id
 	binary.Write(buffer, binary.LittleEndian, int32(reqID))
@@ -172,7 +175,7 @@ func (r *RemoteConsole) writeCmd(reqID, pkgType int32, str string) (int, error) 
 	binary.Write(buffer, binary.LittleEndian, int32(pkgType))
 
 	// string (null terminated)
-	buffer.WriteString(str)
+	buffer.WriteString(cmd)
 	binary.Write(buffer, binary.LittleEndian, byte(0))
 
 	// string 2 (null terminated)
@@ -181,7 +184,8 @@ func (r *RemoteConsole) writeCmd(reqID, pkgType int32, str string) (int, error) 
 
 	r.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 	_, err := r.conn.Write(buffer.Bytes())
-	return int(reqID), err
+
+	return err
 }
 
 func (r *RemoteConsole) readResponse(timeout time.Duration) (int, int, []byte, error) {

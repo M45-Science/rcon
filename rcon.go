@@ -7,7 +7,6 @@ import (
 	"io"
 	"net"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -45,7 +44,6 @@ type RemoteConsole struct {
 	conn       net.Conn
 	readBuff   []byte
 	readMutex  sync.Mutex
-	reqID      int32
 	queuedBuff []byte
 }
 
@@ -79,9 +77,8 @@ func Dial(host, password string) (*RemoteConsole, error) {
 		return nil, err
 	}
 
-	var reqID int
-	r := &RemoteConsole{conn: conn, reqID: 0x7fffffff}
-	reqID, err = r.writeCmd(typeAuth, password)
+	r := &RemoteConsole{conn: conn}
+	reqID, err := r.writeCmd(newRequestID(), typeAuth, password)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +122,7 @@ func (r *RemoteConsole) RemoteAddr() net.Addr {
 
 // Write sends a command to the server.
 func (r *RemoteConsole) Write(cmd string) (requestID int, err error) {
-	return r.writeCmd(typeExecCommand, cmd)
+	return r.writeCmd(newRequestID(), typeExecCommand, cmd)
 }
 
 // Read reads a incoming request from the server.
@@ -147,22 +144,16 @@ func (r *RemoteConsole) Close() error {
 	return r.conn.Close()
 }
 
-func newRequestID(id int32) int32 {
-	if id&0x0fffffff != id {
-		return int32((time.Now().UnixNano() / 100000) % 100000)
-	}
-	return id + 1
+func newRequestID() int32 {
+	return int32((time.Now().UnixNano() / 100000) % 100000)
 }
 
-func (r *RemoteConsole) writeCmd(pkgType int32, str string) (int, error) {
+func (r *RemoteConsole) writeCmd(reqID, pkgType int32, str string) (int, error) {
 	if len(str) > 1024-10 {
 		return -1, ErrCommandTooLong
 	}
 
 	buffer := bytes.NewBuffer(make([]byte, 0, minPackageSize+fieldPackageSize+len(str)))
-	reqID := atomic.LoadInt32(&r.reqID)
-	reqID = newRequestID(reqID)
-	atomic.StoreInt32(&r.reqID, reqID)
 
 	// packet size
 	binary.Write(buffer, binary.LittleEndian, int32(minPackageSize+len(str)))

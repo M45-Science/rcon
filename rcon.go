@@ -77,34 +77,10 @@ func Dial(host, password string) (*RemoteConsole, error) {
 		return nil, err
 	}
 
-	r := &RemoteConsole{conn: conn}
-	reqID, err := r.writeCmd(newRequestID(), typeAuth, password)
+	r := &RemoteConsole{conn: conn, readBuff: make([]byte, maxPackageSize)}
+	r.auth(password, timeout)
 	if err != nil {
 		return nil, err
-	}
-
-	r.readBuff = make([]byte, maxPackageSize)
-
-	var respType, requestID int
-	respType, requestID, _, err = r.readResponse(timeout)
-	if err != nil {
-		return nil, err
-	}
-
-	// if we didn't get an auth response back, try again. it is often a bug
-	// with RCON servers that you get an empty response before receiving the
-	// auth response.
-	if respType != typeAuthResponse {
-		respType, requestID, _, err = r.readResponse(timeout)
-	}
-	if err != nil {
-		return nil, err
-	}
-	if respType != typeAuthResponse {
-		return nil, ErrInvalidAuthResponse
-	}
-	if requestID != reqID {
-		return nil, ErrAuthFailed
 	}
 
 	return r, nil
@@ -146,6 +122,37 @@ func (r *RemoteConsole) Close() error {
 
 func newRequestID() int32 {
 	return int32((time.Now().UnixNano() / 100000) % 100000)
+}
+
+func (r *RemoteConsole) auth(password string, timeout time.Duration) error {
+	reqID, err := r.writeCmd(newRequestID(), typeAuth, password)
+	if err != nil {
+		return err
+	}
+
+	var respType, requestID int
+	respType, requestID, _, err = r.readResponse(timeout)
+	if err != nil {
+		return err
+	}
+
+	// if we didn't get an auth response back, try again. it is often a bug
+	// with RCON servers that you get an empty response before receiving the
+	// auth response.
+	if respType != typeAuthResponse {
+		respType, requestID, _, err = r.readResponse(timeout)
+	}
+	if err != nil {
+		return err
+	}
+	if respType != typeAuthResponse {
+		return ErrInvalidAuthResponse
+	}
+	if requestID != reqID {
+		return ErrAuthFailed
+	}
+
+	return nil
 }
 
 func (r *RemoteConsole) writeCmd(reqID, pkgType int32, str string) (int, error) {

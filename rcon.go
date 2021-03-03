@@ -193,58 +193,73 @@ func (r *RemoteConsole) readResponse(timeout time.Duration) (int, int, []byte, e
 	defer r.readMutex.Unlock()
 
 	r.conn.SetReadDeadline(time.Now().Add(timeout))
-	var size int
+	var readBytes int
 	var err error
 	if r.queuedBuff != nil {
 		copy(r.readBuff, r.queuedBuff)
-		size = len(r.queuedBuff)
+		readBytes = len(r.queuedBuff)
 		r.queuedBuff = nil
 	} else {
-		size, err = r.conn.Read(r.readBuff)
+		readBytes, err = r.conn.Read(r.readBuff)
 		if err != nil {
 			return 0, 0, nil, err
 		}
 	}
-	if size < fieldPackageSize {
-		// need the 4 byte packet size...
-		s, err := r.conn.Read(r.readBuff[size:])
-		if err != nil {
-			return 0, 0, nil, err
-		}
-		size += s
+
+	dataSize, readBytes, err := r.readResponsePackageSize(readBytes)
+	if err != nil {
+		return 0, 0, nil, err
 	}
 
-	var dataSize32 int32
-	b := bytes.NewBuffer(r.readBuff[:size])
-	binary.Read(b, binary.LittleEndian, &dataSize32)
-	if dataSize32 < minPackageSize {
-		return 0, 0, nil, ErrUnexpectedFormat
-	}
-
-	totalSize := size
-	dataSize := int(dataSize32)
 	if dataSize > maxPackageSize {
 		return 0, 0, nil, ErrResponseTooLong
 	}
 
 	totalPackageSize := dataSize + fieldPackageSize
 
-	for totalPackageSize > totalSize {
-		size, err := r.conn.Read(r.readBuff[totalSize:])
+	for totalPackageSize > readBytes {
+		b, err := r.conn.Read(r.readBuff[readBytes:])
 		if err != nil {
 			return 0, 0, nil, err
 		}
-		totalSize += size
+		readBytes += b
 	}
 
 	data := r.readBuff[fieldPackageSize:totalPackageSize]
-	if totalSize > totalPackageSize {
+	if readBytes > totalPackageSize {
 		// start of the next buffer was at the end of this packet.
 		// save it for the next read.
-		r.queuedBuff = r.readBuff[totalPackageSize:totalSize]
+		r.queuedBuff = r.readBuff[totalPackageSize:readBytes]
 	}
 
 	return r.readResponseData(data)
+}
+
+// readResponsePackageSize wait until first 4 bytes are read to get the package size.
+// Takes as param howmany bytes are already read.
+// This can lead to a infinity loop if the connection in closed!
+func (r *RemoteConsole) readResponsePackageSize(readBytes int) (int, int, error) {
+	for readBytes < fieldPackageSize {
+		// need the 4 byte packet size...
+		b, err := r.conn.Read(r.readBuff[readBytes:])
+		if err != nil {
+			return 0, 0, err
+		}
+		readBytes += b
+	}
+
+	var size int32
+	b := bytes.NewBuffer(r.readBuff[:readBytes])
+	err := binary.Read(b, binary.LittleEndian, &size)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if size < minPackageSize {
+		return 0, 0, ErrUnexpectedFormat
+	}
+
+	return int(size), readBytes, nil
 }
 
 func (r *RemoteConsole) readResponseData(data []byte) (int, int, []byte, error) {

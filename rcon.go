@@ -36,6 +36,7 @@ const (
 const minPackageSize = fieldIDSize + fieldTypeSize + fieldMinBodySize + fieldEndSize
 
 // maxPackageSize of a request/response package.
+// This size does not include the size field.
 // https://developer.valvesoftware.com/wiki/Source_RCON_Protocol#Packet_Size
 const maxPackageSize = 4096
 
@@ -77,7 +78,7 @@ func Dial(host, password string) (*RemoteConsole, error) {
 		return nil, err
 	}
 
-	r := &RemoteConsole{conn: conn, readBuff: make([]byte, maxPackageSize)}
+	r := &RemoteConsole{conn: conn, readBuff: make([]byte, maxPackageSize+fieldPackageSize)}
 	r.auth(password, timeout)
 	if err != nil {
 		return nil, err
@@ -236,7 +237,7 @@ func (r *RemoteConsole) readResponse(timeout time.Duration) (int, int, []byte, e
 }
 
 // readResponsePackageSize wait until first 4 bytes are read to get the package size.
-// Takes as param howmany bytes are already read.
+// Takes as param how many bytes are already read. The returned size does not include the size field.
 // This can lead to a infinity loop if the connection in closed!
 func (r *RemoteConsole) readResponsePackageSize(readBytes int) (int, int, error) {
 	for readBytes < fieldPackageSize {

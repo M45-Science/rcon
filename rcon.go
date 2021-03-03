@@ -217,19 +217,19 @@ func (r *RemoteConsole) readResponse(timeout time.Duration) (int, int, []byte, e
 	}
 
 	totalPackageSize := dataSize + fieldPackageSize
-
-	for totalPackageSize > readBytes {
-		b, err := r.conn.Read(r.readBuff[readBytes:])
-		if err != nil {
-			return 0, 0, nil, err
-		}
-		readBytes += b
+	readBytes, err = r.readResponsePackage(totalPackageSize, readBytes)
+	if err != nil {
+		return 0, 0, nil, err
 	}
 
+	// The data has to be explicitly selected to prevent copying empty bytes.
 	data := r.readBuff[fieldPackageSize:totalPackageSize]
+
+	// Save not package related bytes for the next read.
 	if readBytes > totalPackageSize {
 		// start of the next buffer was at the end of this packet.
 		// save it for the next read.
+		// The data has to be explicitly selected to prevent copying empty bytes.
 		r.queuedBuff = r.readBuff[totalPackageSize:readBytes]
 	}
 
@@ -261,6 +261,20 @@ func (r *RemoteConsole) readResponsePackageSize(readBytes int) (int, int, error)
 	}
 
 	return int(size), readBytes, nil
+}
+
+// readResponsePackage waits until the whole package is read including the size field.
+// The loop waiting to read the whole package can lead to a infinity loop if the connection is closed!
+func (r *RemoteConsole) readResponsePackage(totalPackageSize, readBytes int) (int, error) {
+	for totalPackageSize > readBytes {
+		b, err := r.conn.Read(r.readBuff[readBytes:])
+		if err != nil {
+			return readBytes, err
+		}
+		readBytes += b
+	}
+
+	return readBytes, nil
 }
 
 func (r *RemoteConsole) readResponseData(data []byte) (int, int, []byte, error) {

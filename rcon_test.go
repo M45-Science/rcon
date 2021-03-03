@@ -43,7 +43,7 @@ func startTestServer(fn func(net.Conn, *bytes.Buffer)) (string, error) {
 		b.Reset()
 		binary.Write(b, binary.LittleEndian, int32(10))
 		binary.Write(b, binary.LittleEndian, int32(requestID))
-		binary.Write(b, binary.LittleEndian, int32(respAuthResponse))
+		binary.Write(b, binary.LittleEndian, int32(typeAuthResponse))
 		binary.Write(b, binary.LittleEndian, byte(0))
 		binary.Write(b, binary.LittleEndian, byte(0))
 		conn.Write(b.Bytes())
@@ -80,7 +80,7 @@ func TestMultipacket(t *testing.T) {
 		// start response
 		binary.Write(b, binary.LittleEndian, int32(10+4000))
 		binary.Write(b, binary.LittleEndian, int32(123))
-		binary.Write(b, binary.LittleEndian, int32(respResponse))
+		binary.Write(b, binary.LittleEndian, int32(typeRespnseValue))
 		for i := 0; i < 4000; i++ {
 			binary.Write(b, binary.LittleEndian, byte(' '))
 		}
@@ -90,7 +90,7 @@ func TestMultipacket(t *testing.T) {
 		// start response
 		binary.Write(b, binary.LittleEndian, int32(10+4000))
 		binary.Write(b, binary.LittleEndian, int32(123))
-		binary.Write(b, binary.LittleEndian, int32(respResponse))
+		binary.Write(b, binary.LittleEndian, int32(typeRespnseValue))
 		for i := 0; i < 2000; i++ {
 			binary.Write(b, binary.LittleEndian, byte(' '))
 		}
@@ -108,7 +108,7 @@ func TestMultipacket(t *testing.T) {
 		// start response
 		binary.Write(b, binary.LittleEndian, int32(10+2000))
 		binary.Write(b, binary.LittleEndian, int32(123))
-		binary.Write(b, binary.LittleEndian, int32(respResponse))
+		binary.Write(b, binary.LittleEndian, int32(typeRespnseValue))
 		for i := 0; i < 2000; i++ {
 			binary.Write(b, binary.LittleEndian, byte(' '))
 		}
@@ -123,7 +123,7 @@ func TestMultipacket(t *testing.T) {
 		b.Reset()
 		binary.Write(b, binary.LittleEndian, int32(10+2000))
 		binary.Write(b, binary.LittleEndian, int32(123))
-		binary.Write(b, binary.LittleEndian, int32(respResponse))
+		binary.Write(b, binary.LittleEndian, int32(typeRespnseValue))
 		for i := 0; i < 2000; i++ {
 			binary.Write(b, binary.LittleEndian, byte(' '))
 		}

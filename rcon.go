@@ -14,11 +14,16 @@ import (
 // Information to the protocol can be found under: https://developer.valvesoftware.com/wiki/Source_RCON_Protocol
 
 const (
-	cmdAuth        = 3
-	cmdExecCommand = 2
+	typeAuth         = 3
+	typeExecCommand  = 2
+	typeRespnseValue = 0
+	typeAuthResponse = 2
 
-	respResponse     = 0
-	respAuthResponse = 2
+	fieldPackageSize = 4
+	fieldIDSize      = 4
+	fieldTypeSize    = 4
+	fieldMinBodySize = 1
+	fieldEndSize     = 1
 )
 
 // The minimum package size contains:
@@ -28,7 +33,8 @@ const (
 // 1 byte for the empty string at the end
 //
 // https://developer.valvesoftware.com/wiki/Source_RCON_Protocol#Packet_Size
-const minPackageSize = 10
+// The 4 bytes representing the size of the package are not included.
+const minPackageSize = fieldIDSize + fieldTypeSize + fieldMinBodySize + fieldEndSize
 
 // maxPackageSize of a request/response package.
 // https://developer.valvesoftware.com/wiki/Source_RCON_Protocol#Packet_Size
@@ -75,7 +81,7 @@ func Dial(host, password string) (*RemoteConsole, error) {
 
 	var reqid int
 	r := &RemoteConsole{conn: conn, reqid: 0x7fffffff}
-	reqid, err = r.writeCmd(cmdAuth, password)
+	reqid, err = r.writeCmd(typeAuth, password)
 	if err != nil {
 		return nil, err
 	}
@@ -91,13 +97,13 @@ func Dial(host, password string) (*RemoteConsole, error) {
 	// if we didn't get an auth response back, try again. it is often a bug
 	// with RCON servers that you get an empty response before receiving the
 	// auth response.
-	if respType != respAuthResponse {
+	if respType != typeAuthResponse {
 		respType, requestID, _, err = r.readResponse(timeout)
 	}
 	if err != nil {
 		return nil, err
 	}
-	if respType != respAuthResponse {
+	if respType != typeAuthResponse {
 		return nil, ErrInvalidAuthResponse
 	}
 	if requestID != reqid {
@@ -119,7 +125,7 @@ func (r *RemoteConsole) RemoteAddr() net.Addr {
 
 // Write sends a command to the server.
 func (r *RemoteConsole) Write(cmd string) (requestID int, err error) {
-	return r.writeCmd(cmdExecCommand, cmd)
+	return r.writeCmd(typeExecCommand, cmd)
 }
 
 // Read reads a incomming request from the server.
@@ -127,7 +133,7 @@ func (r *RemoteConsole) Read() (response string, requestID int, err error) {
 	var respType int
 	var respBytes []byte
 	respType, requestID, respBytes, err = r.readResponse(2 * time.Minute)
-	if err != nil || respType != respResponse {
+	if err != nil || respType != typeRespnseValue {
 		response = ""
 		requestID = 0
 	} else {
@@ -148,12 +154,12 @@ func newRequestID(id int32) int32 {
 	return id + 1
 }
 
-func (r *RemoteConsole) writeCmd(cmdType int32, str string) (int, error) {
+func (r *RemoteConsole) writeCmd(pkgType int32, str string) (int, error) {
 	if len(str) > 1024-10 {
 		return -1, ErrCommandTooLong
 	}
 
-	buffer := bytes.NewBuffer(make([]byte, 0, 14+len(str)))
+	buffer := bytes.NewBuffer(make([]byte, 0, minPackageSize+fieldPackageSize+len(str)))
 	reqid := atomic.LoadInt32(&r.reqid)
 	reqid = newRequestID(reqid)
 	atomic.StoreInt32(&r.reqid, reqid)
@@ -165,7 +171,7 @@ func (r *RemoteConsole) writeCmd(cmdType int32, str string) (int, error) {
 	binary.Write(buffer, binary.LittleEndian, int32(reqid))
 
 	// auth cmd
-	binary.Write(buffer, binary.LittleEndian, int32(cmdType))
+	binary.Write(buffer, binary.LittleEndian, int32(pkgType))
 
 	// string (null terminated)
 	buffer.WriteString(str)
@@ -197,7 +203,7 @@ func (r *RemoteConsole) readResponse(timeout time.Duration) (int, int, []byte, e
 			return 0, 0, nil, err
 		}
 	}
-	if size < 4 {
+	if size < fieldPackageSize {
 		// need the 4 byte packet size...
 		s, err := r.conn.Read(r.readbuf[size:])
 		if err != nil {
@@ -240,10 +246,10 @@ func (r *RemoteConsole) readResponse(timeout time.Duration) (int, int, []byte, e
 func (r *RemoteConsole) readResponseData(data []byte) (int, int, []byte, error) {
 	var requestID, responseType int32
 	var response []byte
-	b := bytes.NewBuffer(data)
-	binary.Read(b, binary.LittleEndian, &requestID)
-	binary.Read(b, binary.LittleEndian, &responseType)
-	response, err := b.ReadBytes(0x00)
+	buffer := bytes.NewBuffer(data)
+	binary.Read(buffer, binary.LittleEndian, &requestID)
+	binary.Read(buffer, binary.LittleEndian, &responseType)
+	response, err := buffer.ReadBytes(byte(0))
 	if err != nil && err != io.EOF {
 		return 0, 0, nil, err
 	}

@@ -160,7 +160,7 @@ func (r *RemoteConsole) auth(password string, timeout time.Duration) error {
 }
 
 func (r *RemoteConsole) writeCmd(reqID, pkgType int32, cmd string) error {
-	if len(cmd) > 1024-10 {
+	if len(cmd) > maxPackageSize-minPackageSize {
 		return ErrCommandTooLong
 	}
 

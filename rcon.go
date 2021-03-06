@@ -238,7 +238,6 @@ func (r *RemoteConsole) readResponse(timeout time.Duration) (int, int, []byte, e
 
 // readResponsePackageSize wait until first 4 bytes are read to get the package size.
 // Takes as param how many bytes are already read. The returned size does not include the size field.
-// This can lead to a infinity loop if the connection in closed!
 func (r *RemoteConsole) readResponsePackageSize(readBytes int) (int, int, error) {
 	for readBytes < fieldPackageSize {
 		// need the 4 byte packet size...
@@ -264,7 +263,6 @@ func (r *RemoteConsole) readResponsePackageSize(readBytes int) (int, int, error)
 }
 
 // readResponsePackage waits until the whole package is read including the size field.
-// The loop waiting to read the whole package can lead to a infinity loop if the connection is closed!
 func (r *RemoteConsole) readResponsePackage(totalPackageSize, readBytes int) (int, error) {
 	for totalPackageSize > readBytes {
 		b, err := r.conn.Read(r.readBuff[readBytes:])

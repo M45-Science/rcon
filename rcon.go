@@ -250,7 +250,7 @@ func (r *RemoteConsole) readResponsePackageSize(readBytes int) (int, int, error)
 	}
 
 	var size int32
-	b := bytes.NewBuffer(r.readBuff[:readBytes])
+	b := bytes.NewBuffer(r.readBuff[:fieldPackageSize])
 	err := binary.Read(b, binary.LittleEndian, &size)
 	if err != nil {
 		return 0, 0, err

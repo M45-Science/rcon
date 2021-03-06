@@ -97,7 +97,10 @@ func (r *RemoteConsole) RemoteAddr() net.Addr {
 	return r.conn.RemoteAddr()
 }
 
-// Write sends a command to the server.
+// Write a command to the server.
+//
+// It can return ErrCommandTooLong if the given cmd str is too long.
+// Additionally it can return any other connection related errors.
 func (r *RemoteConsole) Write(cmd string) (requestID int, err error) {
 	requestID = int(newRequestID())
 	err = r.writeCmd(int32(requestID), typeExecCommand, cmd)
@@ -105,7 +108,14 @@ func (r *RemoteConsole) Write(cmd string) (requestID int, err error) {
 	return
 }
 
-// Read reads a incoming request from the server.
+// Read a incoming response from the server.
+// If the response doesn't contain the correct ResponseValue it will return a response with a empty string an the request id = 0.
+// This is also the case if an error happens even though the error will be returned.
+//
+// It can return following errors:
+//  - ErrResponseTooLong
+//  - ErrUnexpectedFormat
+//  - or a connection error that isn't typed in this package
 func (r *RemoteConsole) Read() (response string, requestID int, err error) {
 	var respType int
 	var respBytes []byte

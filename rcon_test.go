@@ -7,6 +7,8 @@ import (
 	"testing"
 )
 
+const password = "password"
+
 func startTestServer(fn func(net.Conn, *bytes.Buffer)) (string, error) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -36,7 +38,7 @@ func startTestServer(fn func(net.Conn, *bytes.Buffer)) (string, error) {
 		if err != nil {
 			return
 		}
-		if string(str[:len(str)-1]) != "blerg" {
+		if string(str[:len(str)-1]) != password {
 			requestID = -1
 		}
 
@@ -96,7 +98,7 @@ func TestAuth(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rc, err := Dial(addr, "blerg")
+	rc, err := Dial(addr, password)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +120,7 @@ func TestMultipacket(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		rc, err := Dial(addr, "blerg")
+		rc, err := Dial(addr, password)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -144,7 +146,7 @@ func TestMultipacket(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		rc, err := Dial(addr, "blerg")
+		rc, err := Dial(addr, password)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -172,7 +174,7 @@ func TestMultipacket(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		rc, err := Dial(addr, "blerg")
+		rc, err := Dial(addr, password)
 		if err != nil {
 			t.Fatal(err)
 		}

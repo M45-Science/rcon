@@ -5,7 +5,7 @@ This is a fork from [james4k/rcon](https://github.com/james4k/rcon) with the sup
 
 ## Usage
 ```golang
-// Espablish a connection.
+// Establish a connection.
 remoteConsole, err := rcon.Dial("127.0.0.1", "password")
 if err != nil {
     fmt.Println(err)
@@ -30,10 +30,10 @@ fmt.Println(response)
 ```
 
 ## License
-This lib is licesed under the [MIT License](LICENSE)
+This lib is licensed under the [MIT License](LICENSE).
 
 ## Contributors
-If you should encaunter a bug or a missing feature dont hessitate to open an issue or even submit a pull-request.
+If you should encounter a bug or a missing feature don't hesitate to open an issue or even submit a pull-request.
 
 
 Special thx to [nhh](https://github.com/nhh) and [dnltinney](https://github.com/dnltinney) for the great help debugging this lib.

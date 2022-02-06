@@ -182,15 +182,14 @@ func (r *RemoteConsole) writeCmd(reqID, pkgType int32, cmd string) error {
 	// request id
 	binary.Write(buffer, binary.LittleEndian, int32(reqID))
 
-	// auth cmd
+	// type of the package
 	binary.Write(buffer, binary.LittleEndian, int32(pkgType))
 
-	// string (null terminated)
+	// body
 	buffer.WriteString(cmd)
+	
+	// double null termination
 	binary.Write(buffer, binary.LittleEndian, byte(0))
-
-	// string 2 (null terminated)
-	// we don't have a use for string 2
 	binary.Write(buffer, binary.LittleEndian, byte(0))
 
 	r.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))

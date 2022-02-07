@@ -8,22 +8,24 @@ This is a fork from [james4k/rcon](https://github.com/james4k/rcon) with the sup
 // Establish a connection.
 remoteConsole, err := rcon.Dial("127.0.0.1", "password")
 if err != nil {
-    fmt.Println(err)
+    log.Fatal(err)
 }
+// Close the connection at the end to free the used resources.
+defer remoteConsole.Close()
 
 // Send a command.
 requestID, err := remoteConsole.Write("command")
 if err != nil {
-    fmt.Println(err)
+    log.Fatal(err)
 }
 
-// Read the response
+// Read the response.
 response, responseID, err := remoteConsole.Read()
 if err != nil {
-    fmt.Println(err)
+    log.Fatal(err)
 }
 if requestID != responseID {
-    fmt.Println("response id doesn't match the request id!")
+    log.Fatal("response id doesn't match the request id!")
 }
 
 fmt.Println(response)

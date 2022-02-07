@@ -78,13 +78,16 @@ func Dial(host, password string) (*RemoteConsole, error) {
 		return nil, err
 	}
 
-	r := &RemoteConsole{conn: conn, readBuff: make([]byte, maxPackageSize+fieldPackageSize)}
-	r.auth(password, timeout)
+	remoteConsole := &RemoteConsole{
+		conn:     conn,
+		readBuff: make([]byte, maxPackageSize+fieldPackageSize),
+	}
+	remoteConsole.auth(password, timeout)
 	if err != nil {
 		return nil, err
 	}
 
-	return r, nil
+	return remoteConsole, nil
 }
 
 // LocalAddr returns the local network address.
@@ -187,7 +190,7 @@ func (r *RemoteConsole) writeCmd(reqID, pkgType int32, cmd string) error {
 
 	// body
 	buffer.WriteString(cmd)
-	
+
 	// double null termination
 	binary.Write(buffer, binary.LittleEndian, byte(0))
 	binary.Write(buffer, binary.LittleEndian, byte(0))

@@ -1,3 +1,12 @@
+/*
+A Go written library for the RCON Protocol from Valve.
+
+Information to the protocol can be found under:
+https://developer.valvesoftware.com/wiki/Source_RCON_Protocol
+
+This is a fork from https://github.com/james4k/rcon with the support for go
+modules and with a rework of the original implementation for better readability.
+*/
 package rcon
 
 import (
@@ -9,8 +18,6 @@ import (
 	"sync"
 	"time"
 )
-
-// Information to the protocol can be found under: https://developer.valvesoftware.com/wiki/Source_RCON_Protocol
 
 const (
 	typeAuth          = 3

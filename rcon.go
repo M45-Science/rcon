@@ -13,7 +13,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"io"
 	"net"
 	"sync"
 	"time"
@@ -296,17 +295,22 @@ func (r *RemoteConsole) readResponsePackage(totalPackageSize, readBytes int) (in
 
 func (r *RemoteConsole) readResponseData(data []byte) (int, int, []byte, error) {
 	var requestID, responseType int32
-	var response []byte
 	buffer := bytes.NewBuffer(data)
-	binary.Read(buffer, binary.LittleEndian, &requestID)
+
+	err := binary.Read(buffer, binary.LittleEndian, &requestID)
+	if err != nil {
+		return 0, 0, []byte{}, err
+	}
+
 	binary.Read(buffer, binary.LittleEndian, &responseType)
-	response, err := buffer.ReadBytes(byte(0))
-	if err != nil && err != io.EOF {
-		return 0, 0, nil, err
+	if err != nil {
+		return 0, 0, []byte{}, err
 	}
-	if err == nil {
-		// if we didn't hit EOF, we have a null byte to remove
-		response = response[:len(response)-1]
-	}
-	return int(responseType), int(requestID), response, nil
+
+	// the rest of the buffer is the body.
+	body := buffer.Bytes()
+	// remove the to null terminations
+	body = body[:len(body)-2]
+
+	return int(responseType), int(requestID), body, nil
 }

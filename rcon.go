@@ -74,9 +74,9 @@ var (
 
 // Dial establishes a connection with the remote server.
 // It can return multiple errors:
-// 	- ErrInvalidAuthResponse
-// 	- ErrAuthFailed
-// 	- and other types of connection errors that are not specified in this package.
+//   - ErrInvalidAuthResponse
+//   - ErrAuthFailed
+//   - and other types of connection errors that are not specified in this package.
 func Dial(host, password string) (*RemoteConsole, error) {
 	const timeout = 10 * time.Second
 	conn, err := net.DialTimeout("tcp", host, timeout)
@@ -88,7 +88,7 @@ func Dial(host, password string) (*RemoteConsole, error) {
 		conn:     conn,
 		readBuff: make([]byte, maxPackageSize+fieldPackageSize),
 	}
-	remoteConsole.auth(password, timeout)
+	err = remoteConsole.auth(password, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -122,9 +122,9 @@ func (r *RemoteConsole) Write(cmd string) (requestID int, err error) {
 // This is also the case if an error happens even though the error will be returned.
 //
 // It can return following errors:
-//  - ErrResponseTooLong
-//  - ErrUnexpectedFormat
-//  - or a connection error that isn't typed in this package
+//   - ErrResponseTooLong
+//   - ErrUnexpectedFormat
+//   - or a connection error that isn't typed in this package
 func (r *RemoteConsole) Read() (response string, requestID int, err error) {
 	var respType int
 	var respBytes []byte
@@ -302,7 +302,7 @@ func (r *RemoteConsole) readResponseData(data []byte) (int, int, []byte, error) 
 		return 0, 0, []byte{}, err
 	}
 
-	binary.Read(buffer, binary.LittleEndian, &responseType)
+	err = binary.Read(buffer, binary.LittleEndian, &responseType)
 	if err != nil {
 		return 0, 0, []byte{}, err
 	}

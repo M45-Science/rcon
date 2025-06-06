@@ -1,7 +1,7 @@
 # rcon
 A go written library for the [RCON Protocol](https://developer.valvesoftware.com/wiki/Source_RCON_Protocol).
 
-This is a fork from [james4k/rcon](https://github.com/james4k/rcon) with the support for go modules and with a rework of the original implementation for better readability.
+This is a fork from [/hamburghammer/rcon](https://github.com/hamburghammer/rcon) specifically for M45.
 
 ## Usage
 ```golang
